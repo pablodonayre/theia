@@ -48,12 +48,12 @@ export class DebugExtImpl implements DebugExt {
     // providers by type
     private configurationProviders = new Map<string, Set<theia.DebugConfigurationProvider>>();
     private debuggersContributions = new Map<string, DebuggerContribution>();
+    private pluginsFolders = new Map<string, string>();
 
     private connectionExt: ConnectionExtImpl;
     private commandRegistryExt: CommandRegistryImpl;
 
     private proxy: DebugMain;
-    private pluginFolder: string;
 
     private readonly onDidChangeBreakpointsEmitter = new Emitter<theia.BreakpointsChangeEvent>();
     private readonly onDidChangeActiveDebugSessionEmitter = new Emitter<theia.DebugSession | undefined>();
@@ -87,9 +87,9 @@ export class DebugExtImpl implements DebugExt {
      * @param contributions available debuggers contributions
      */
     registerDebuggersContributions(pluginFolder: string, contributions: DebuggerContribution[]): void {
-        this.pluginFolder = pluginFolder;
         contributions.forEach((contribution: DebuggerContribution) => {
             this.debuggersContributions.set(contribution.type, contribution);
+            this.pluginsFolders.set(contribution.type, pluginFolder);
             this.proxy.$registerDebuggerContribution({
                 type: contribution.type,
                 label: contribution.label || contribution.type
@@ -261,11 +261,13 @@ export class DebugExtImpl implements DebugExt {
 
     private async getExecutable(debugConfiguration: theia.DebugConfiguration): Promise<DebugAdapterExecutable> {
         const contribution = this.debuggersContributions.get(debugConfiguration.type);
+        const pluginFolder = this.pluginsFolders.get(debugConfiguration.type);
+
         if (contribution) {
             if (contribution.adapterExecutableCommand) {
                 return await this.commandRegistryExt.executeCommand(contribution.adapterExecutableCommand, []) as DebugAdapterExecutable;
-            } else {
-                return resolveDebugAdapterExecutable(this.pluginFolder, contribution);
+            } else if (pluginFolder) {
+                return resolveDebugAdapterExecutable(pluginFolder, contribution);
             }
         }
 

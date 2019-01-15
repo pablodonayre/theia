@@ -47,6 +47,7 @@ import { TclContribution } from './tcl';
 import { XmlContribution } from './xml';
 import { XslContribution } from './xsl';
 import { LanguageGrammarDefinitionContribution } from '@theia/monaco/lib/browser/textmate/textmate-contribution';
+import { GoContribution } from './go';
 
 export default new ContainerModule(bind => {
     bind(BatContribution).toSelf().inSingletonScope();
@@ -141,4 +142,7 @@ export default new ContainerModule(bind => {
 
     bind(XslContribution).toSelf().inSingletonScope();
     bind(LanguageGrammarDefinitionContribution).toService(XslContribution);
+
+    bind(GoContribution).toSelf().inSingletonScope();
+    bind(LanguageGrammarDefinitionContribution).toService(GoContribution);
 });

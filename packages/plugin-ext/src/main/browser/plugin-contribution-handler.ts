@@ -21,7 +21,7 @@ import { MenusContributionPointHandler } from './menus/menus-contribution-handle
 import { ViewRegistry } from './view/view-registry';
 import { PluginContribution, IndentationRules, FoldingRules, ScopeMap } from '../../common';
 import { PreferenceSchemaProvider } from '@theia/core/lib/browser';
-import { PreferenceSchema } from '@theia/core/lib/browser/preferences';
+import { PreferenceSchema, PreferenceProperty } from '@theia/core/lib/browser/preferences';
 import { KeybindingsContributionPointHandler } from './keybindings/keybindings-contribution-handler';
 
 @injectable()
@@ -49,7 +49,11 @@ export class PluginContributionHandler {
 
     handleContributions(contributions: PluginContribution): void {
         if (contributions.configuration) {
-            this.updateConfigurationSchema(contributions.configuration);
+            try {
+                this.updateConfigurationSchema(contributions.configuration);
+            } catch (e) {
+                console.error(e);
+            }
         }
 
         if (contributions.languages) {
@@ -134,6 +138,7 @@ export class PluginContributionHandler {
     }
 
     private updateConfigurationSchema(schema: PreferenceSchema): void {
+        this.fixConfigurationSchema(schema);
         this.preferenceSchemaProvider.setSchema(schema);
     }
 
@@ -216,5 +221,29 @@ export class PluginContributionHandler {
             result[scope] = getEncodedLanguageId(langId);
         }
         return result;
+    }
+
+    protected fixConfigurationSchema(schema: PreferenceSchema): void {
+        // tslint:disable-next-line:forin
+        for (const p in schema.properties) {
+            this.fixDefaultValue(schema.properties[p]);
+        }
+    }
+
+    // tslint:disable-next-line:no-any
+    protected fixDefaultValue(property: PreferenceProperty): void {
+        if (property.default || property.type !== 'object') {
+            return;
+        }
+
+        property.default = {};
+
+        const properties = property['properties'];
+        if (properties) {
+            // tslint:disable-next-line:forin
+            for (const key in properties) {
+                property.default[key] = properties[key].default;
+            }
+        }
     }
 }
