@@ -110,6 +110,7 @@ export class HostedPluginProcess implements ServerPluginRunner {
 
     }
 
+    readonly d = [''];
     private fork(options: IPCConnectionOptions): cp.ChildProcess {
 
         // create env and add PATH to it so any executable from root process is available

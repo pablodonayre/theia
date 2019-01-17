@@ -49,11 +49,7 @@ export class PluginContributionHandler {
 
     handleContributions(contributions: PluginContribution): void {
         if (contributions.configuration) {
-            try {
-                this.updateConfigurationSchema(contributions.configuration);
-            } catch (e) {
-                console.error(e);
-            }
+            this.updateConfigurationSchema(contributions.configuration);
         }
 
         if (contributions.languages) {
@@ -138,7 +134,7 @@ export class PluginContributionHandler {
     }
 
     private updateConfigurationSchema(schema: PreferenceSchema): void {
-        this.fixConfigurationSchema(schema);
+        this.validateConfigurationSchema(schema);
         this.preferenceSchemaProvider.setSchema(schema);
     }
 
@@ -223,26 +219,41 @@ export class PluginContributionHandler {
         return result;
     }
 
-    protected fixConfigurationSchema(schema: PreferenceSchema): void {
+    protected validateConfigurationSchema(schema: PreferenceSchema): void {
         // tslint:disable-next-line:forin
         for (const p in schema.properties) {
-            this.fixDefaultValue(schema.properties[p]);
+            const property = schema.properties[p];
+            if (property.type !== 'object') {
+                continue;
+            }
+
+            if (!property.default) {
+                this.validateDefaultValue(property);
+            }
+
+            const properties = property['properties'];
+            if (properties) {
+                // tslint:disable-next-line:forin
+                for (const key in properties) {
+                    if (typeof properties[key] !== 'object') {
+                        delete properties[key];
+                    }
+                }
+            }
         }
     }
 
-    // tslint:disable-next-line:no-any
-    protected fixDefaultValue(property: PreferenceProperty): void {
-        if (property.default || property.type !== 'object') {
-            return;
-        }
-
+    private validateDefaultValue(property: PreferenceProperty): void {
         property.default = {};
 
         const properties = property['properties'];
         if (properties) {
             // tslint:disable-next-line:forin
             for (const key in properties) {
-                property.default[key] = properties[key].default;
+                if (properties[key].default) {
+                    property.default[key] = properties[key].default;
+                    delete properties[key].default;
+                }
             }
         }
     }
